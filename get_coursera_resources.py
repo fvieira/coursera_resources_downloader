@@ -61,7 +61,7 @@ def download_to_file(url, file_name):
 def clean_lecture_name(lecture_name):
     if '(' in lecture_name:
         lecture_name = lecture_name.rpartition('(')[0]
-    return make_valid_filename(lecture_name.strip())
+    return lecture_name.strip()
 
 WEEK_RE = re.compile(r'(.*)\(week (\d+)\)$')
 def take_week_from_section(section):
@@ -137,8 +137,13 @@ def main():
         if not os.path.exists(section_folder):
             os.makedirs(section_folder)
         lecture_names = lecture_list_el.xpath('./li/a/text()')
-        clean_lecture_names = [clean_lecture_name(lecture_name) for lecture_name in lecture_names]
-        final_lecture_names = [os.path.join(section_folder, '{}.{} - {}'.format(i, j, vn)) for j, vn in enumerate(clean_lecture_names, 1)]
+        final_lecture_names = []
+        for j, lecture_name in enumerate(lecture_names, 1):
+            lecture_name = clean_lecture_name(lecture_name)
+            lecture_name = '{} - {}'.format(j, lecture_name)
+            lecture_name = make_valid_filename(lecture_name)
+            lecture_name = os.path.join(section_folder, lecture_name)
+            final_lecture_names.append(lecture_name)
         url_list = lecture_list_el.xpath('./li/div[@class="item_resource"]/a/@href')
         for j, url in enumerate(url_list):
             resource_dict = RESOURCE_DICTS[j%4]

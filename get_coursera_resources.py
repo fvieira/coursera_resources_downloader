@@ -65,7 +65,7 @@ def clean_lecture_name(lecture_name):
 def main():
     parser = argparse.ArgumentParser(description='Gets lecture resources (videos by default) of an online Coursera course.')
     parser.add_argument('course_id', help='Course identifier (found in URL after www.coursera.org)')
-    parser.add_argument('session_cookie', help='Valid session cookie for the course site.')
+    parser.add_argument('session_cookie', help='Valid session cookie for the course site. The cookie name is "session".')
     parser.add_argument('--pdfs', action='store_true', help='Get the pdfs for each lecture. Disabled by default.')
     parser.add_argument('--pptx', action='store_true', help='Get the pptx\'s for each lecture. Disabled by default.')
     parser.add_argument('--subs', action='store_true', help='Get the subtitles for each lecture. Disabled by default.')

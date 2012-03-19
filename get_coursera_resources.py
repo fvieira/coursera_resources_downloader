@@ -16,13 +16,14 @@ RESOURCE_DICTS = [{'arg': 'pdfs',  'extension': 'pdf'},
 
 WIN_VALID_CHARS = "-_.() " + string.ascii_letters + string.digits
 MAX_WIN_FILE_SIZE = 50
+MAX_LINUX_FILE_SIZE = 140
 IS_WINDOWS = platform.system() == 'Windows'
 
 def make_valid_filename(filename):
     if IS_WINDOWS:
         return ''.join((c if c in WIN_VALID_CHARS else '_') for c in filename)[:MAX_WIN_FILE_SIZE]
     else:
-        return filename.replace(os.sep, '_')
+        return filename.replace(os.sep, '_')[:MAX_LINUX_FILE_SIZE]
 
 # Based in PabloG answer at http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python
 def download_to_file(url, file_name):

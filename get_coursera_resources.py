@@ -89,6 +89,7 @@ def main():
     parser.add_argument('--pptx', action='store_true', help='Get the pptx\'s for each lecture. Disabled by default.')
     parser.add_argument('--subs', action='store_true', help='Get the subtitles for each lecture. Disabled by default.')
     parser.add_argument('--no-video', dest='video', action='store_false', help='Do not download the videos. Use this if you only want other resources such as pdfs.')
+    parser.add_argument('--section-lecture-format', dest='section_lecture_format', action='store_true', help='Use the section number on the name of lectures. Ex: file abc which belongs to the first lecture of section 2 will get named 2.1 - abc')
     args = parser.parse_args()
 
     if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS):
@@ -141,6 +142,8 @@ def main():
         for j, lecture_name in enumerate(lecture_names, 1):
             lecture_name = clean_lecture_name(lecture_name)
             lecture_name = '{} - {}'.format(j, lecture_name)
+            if args.section_lecture_format:
+                lecture_name = '{}.{}'.format(i, lecture_name)
             lecture_name = make_valid_filename(lecture_name)
             lecture_name = os.path.join(section_folder, lecture_name)
             final_lecture_names.append(lecture_name)

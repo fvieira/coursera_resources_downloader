@@ -5,8 +5,9 @@ import argparse
 import platform
 import urllib2
 import string
-import os
 import sys
+import os
+import re
 
 RESOURCE_DICTS = [{'arg': 'pdfs',  'extension': 'pdf'},
                   {'arg': 'pptx',  'extension': 'pptx'},
@@ -61,6 +62,23 @@ def clean_lecture_name(lecture_name):
         lecture_name = lecture_name.rpartition('(')[0]
     return make_valid_filename(lecture_name.strip())
 
+WEEK_RE = re.compile(r'(.*)\(week (\d+)\)$')
+def take_week_from_section(section):
+    week = 0
+    match = WEEK_RE.match(section)
+    if match:
+        section, week = match.groups()
+        section = section.strip()
+        week = int(week)
+    return section, week
+
+def compare_sections(s1, s2):
+    if (s1[1] != s2[1]):
+        return s1[1] - s2[1]
+    if (s1[2] != s2[2]):
+        return s1[1] - s2[1]
+    assert False
+
 
 def main():
     parser = argparse.ArgumentParser(description='Gets lecture resources (videos by default) of an online Coursera course.')
@@ -92,7 +110,7 @@ def main():
     print('Done')
     tree = etree.HTML(doc)
     try:
-        course_title = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')[0]
+        course_title = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')[0].strip()
     except IndexError:
         print('Failed to find course title.')
         print('This probably means the session cookie was incorrect and we failed to enter the lecture index page.')
@@ -101,10 +119,18 @@ def main():
 
     item_list = tree.xpath('//div[@class="item_list"]')[0]
     print('Starting downloads')
+    sections = []
     for i in xrange(0, len(item_list)/2):
         section_el, lecture_list_el = item_list[2*i], item_list[2*i+1]
-        section = section_el.xpath('./h3/text()')[0]
-        section = '{} - {}'.format(i + 1, section)
+        section = section_el.xpath('./h3/text()')[0].strip()
+        no_week_section, week = take_week_from_section(section)
+        sections.append((no_week_section, week, i, lecture_list_el))
+    sections = sorted(sections, compare_sections)
+
+    for i, (no_week_section, week, _, lecture_list_el) in enumerate(sections, 1):
+        section = '{} - {}'.format(i, no_week_section)
+        if week:
+            section += ' (week {})'.format(week)
         section = make_valid_filename(section)
         section_folder = os.path.join(course_title, section)
         if not os.path.exists(section_folder):
@@ -113,10 +139,10 @@ def main():
         clean_lecture_names = [clean_lecture_name(lecture_name) for lecture_name in lecture_names]
         final_lecture_names = [os.path.join(section_folder, '{} - {}'.format(j, vn)) for j, vn in enumerate(clean_lecture_names, 1)]
         url_list = lecture_list_el.xpath('./li/div[@class="item_resource"]/a/@href')
-        for i, url in enumerate(url_list):
-            resource_dict = RESOURCE_DICTS[i%4]
+        for j, url in enumerate(url_list):
+            resource_dict = RESOURCE_DICTS[j%4]
             if getattr(args, resource_dict['arg']):
-                file_name = final_lecture_names[i/4]
+                file_name = final_lecture_names[j/4]
                 full_file_name = '{}.{}'.format(file_name, resource_dict['extension'])
                 if not os.path.exists(full_file_name):
                     download_to_file(url, full_file_name)

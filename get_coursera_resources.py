@@ -138,7 +138,7 @@ def main():
             os.makedirs(section_folder)
         lecture_names = lecture_list_el.xpath('./li/a/text()')
         clean_lecture_names = [clean_lecture_name(lecture_name) for lecture_name in lecture_names]
-        final_lecture_names = [os.path.join(section_folder, '{} - {}'.format(j, vn)) for j, vn in enumerate(clean_lecture_names, 1)]
+        final_lecture_names = [os.path.join(section_folder, '{}.{} - {}'.format(i, j, vn)) for j, vn in enumerate(clean_lecture_names, 1)]
         url_list = lecture_list_el.xpath('./li/div[@class="item_resource"]/a/@href')
         for j, url in enumerate(url_list):
             resource_dict = RESOURCE_DICTS[j%4]

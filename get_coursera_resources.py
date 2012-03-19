@@ -88,7 +88,7 @@ def main():
     parser.add_argument('--pdfs', action='store_true', help='Get the pdfs for each lecture. Disabled by default.')
     parser.add_argument('--pptx', action='store_true', help='Get the pptx\'s for each lecture. Disabled by default.')
     parser.add_argument('--subs', action='store_true', help='Get the subtitles for each lecture. Disabled by default.')
-    parser.add_argument('--no_video', dest='video', action='store_false', help='Do not download the videos. Use this if you only want other resources such as pdfs.')
+    parser.add_argument('--no-video', dest='video', action='store_false', help='Do not download the videos. Use this if you only want other resources such as pdfs.')
     args = parser.parse_args()
 
     if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS):

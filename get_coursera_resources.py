@@ -2,7 +2,9 @@
 from __future__ import print_function
 from lxml import etree
 import argparse
+import platform
 import urllib2
+import string
 import os
 import sys
 
@@ -10,6 +12,16 @@ RESOURCE_DICTS = [{'arg': 'pdfs',  'extension': 'pdf'},
                   {'arg': 'pptx',  'extension': 'pptx'},
                   {'arg': 'subs',  'extension': 'srt'},
                   {'arg': 'video', 'extension': 'mp4'}]
+
+WIN_VALID_CHARS = "-_.() " + string.ascii_letters + string.digits
+MAX_WIN_FILE_SIZE = 50
+IS_WINDOWS = platform.system() == 'Windows'
+
+def make_valid_filename(filename):
+    if IS_WINDOWS:
+        return ''.join((c if c in WIN_VALID_CHARS else '_') for c in filename)[:MAX_WIN_FILE_SIZE]
+    else:
+        return filename.replace(os.sep, '_')
 
 # Based in PabloG answer at http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python
 def download_to_file(url, file_name):
@@ -47,7 +59,7 @@ def download_to_file(url, file_name):
 def clean_lecture_name(lecture_name):
     if '(' in lecture_name:
         lecture_name = lecture_name.rpartition('(')[0]
-    return lecture_name.strip()
+    return make_valid_filename(lecture_name.strip())
 
 
 def main():
@@ -85,6 +97,7 @@ def main():
         print('Failed to find course title.')
         print('This probably means the session cookie was incorrect and we failed to enter the lecture index page.')
         sys.exit()
+    course_title = make_valid_filename(course_title)
 
     item_list = tree.xpath('//div[@class="item_list"]')[0]
     print('Starting downloads')
@@ -92,6 +105,7 @@ def main():
         section_el, lecture_list_el = item_list[2*i], item_list[2*i+1]
         section = section_el.xpath('./h3/text()')[0]
         section = '{} - {}'.format(i + 1, section)
+        section = make_valid_filename(section)
         section_folder = os.path.join(course_title, section)
         if not os.path.exists(section_folder):
             os.makedirs(section_folder)

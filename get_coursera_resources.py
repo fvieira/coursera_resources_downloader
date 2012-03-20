@@ -32,7 +32,7 @@ def download_to_file(url, file_name):
         meta = open_url.info()
         length_headers = meta.getheaders('Content-Length')
         file_size = int(length_headers[0]) if length_headers else None
-        print('Downloading: {}'.format(file_name))
+        print('Downloading: {0}'.format(file_name))
 
         file_size_dl = 0
         block_sz = 8192
@@ -43,17 +43,17 @@ def download_to_file(url, file_name):
 
             file_size_dl += len(buf)
             f.write(buf)
-            fsdmb = '{:d}'.format(file_size_dl / 1000000)
-            fsdkb = '{:03d}'.format(file_size_dl / 1000 % 1000)
-            fsd = '{}.{}'.format(fsdmb, fsdkb)
+            fsdmb = '{0:d}'.format(file_size_dl / 1000000)
+            fsdkb = '{0:03d}'.format(file_size_dl / 1000 % 1000)
+            fsd = '{0}.{1}'.format(fsdmb, fsdkb)
             if file_size:
-                fsmb = '{:d}'.format(file_size / 1000000)
-                fskb = '{:03d}'.format(file_size / 1000 % 1000)
-                fs = '{}.{}'.format(fsmb, fskb)
-                percentage = '{:.2f}'.format(file_size_dl * 100. / file_size)
-                status = r'{:>8s}/{:s} Mb [{}%]'.format(fsd, fs, percentage)
+                fsmb = '{0:d}'.format(file_size / 1000000)
+                fskb = '{0:03d}'.format(file_size / 1000 % 1000)
+                fs = '{0}.{1}'.format(fsmb, fskb)
+                percentage = '{0:.2f}'.format(file_size_dl * 100. / file_size)
+                status = r'{0:>8s}/{1:s} Mb [{2}%]'.format(fsd, fs, percentage)
             else:
-                status = r'{:>8s} Mb'.format(fsd)
+                status = r'{0:>8s} Mb'.format(fsd)
             status = status + chr(8) * (len(status) + 1)
             print(status, end='')
 
@@ -97,16 +97,16 @@ def main():
         sys.exit()
 
     opener = urllib2.build_opener()
-    opener.addheaders.append(('Cookie', 'session={}'.format(args.session_cookie)))
+    opener.addheaders.append(('Cookie', 'session={0}'.format(args.session_cookie)))
     urllib2.install_opener(opener)
-    course_url = 'https://www.coursera.org/{}/lecture/index'.format(args.course_id)
+    course_url = 'https://www.coursera.org/{0}/lecture/index'.format(args.course_id)
 
     print('Trying to open lecture index page')
     try:
         doc = urllib2.urlopen(course_url).read()
     except urllib2.HTTPError:
-        print('Failed to open lecture index page at {}'.format(course_url))
-        print('Please make sure the course identifier you provided ({}) is correct.'.format(args.course_id))
+        print('Failed to open lecture index page at {0}'.format(course_url))
+        print('Please make sure the course identifier you provided ({0}) is correct.'.format(args.course_id))
         sys.exit()
 
     print('Done')
@@ -130,9 +130,9 @@ def main():
     sections = sorted(sections, compare_sections)
 
     for i, (no_week_section, week, _, lecture_list_el) in enumerate(sections, 1):
-        section = '{} - {}'.format(i, no_week_section)
+        section = '{0} - {1}'.format(i, no_week_section)
         if week:
-            section += ' (week {})'.format(week)
+            section += ' (week {0})'.format(week)
         section = make_valid_filename(section)
         section_folder = os.path.join(course_title, section)
         if not os.path.exists(section_folder):
@@ -141,9 +141,9 @@ def main():
         final_lecture_names = []
         for j, lecture_name in enumerate(lecture_names, 1):
             lecture_name = clean_lecture_name(lecture_name)
-            lecture_name = '{} - {}'.format(j, lecture_name)
+            lecture_name = '{0} - {1}'.format(j, lecture_name)
             if args.section_lecture_format:
-                lecture_name = '{}.{}'.format(i, lecture_name)
+                lecture_name = '{0}.{1}'.format(i, lecture_name)
             lecture_name = make_valid_filename(lecture_name)
             lecture_name = os.path.join(section_folder, lecture_name)
             final_lecture_names.append(lecture_name)
@@ -152,7 +152,7 @@ def main():
             resource_dict = RESOURCE_DICTS[j%4]
             if getattr(args, resource_dict['arg']):
                 file_name = final_lecture_names[j/4]
-                full_file_name = '{}.{}'.format(file_name, resource_dict['extension'])
+                full_file_name = '{0}.{1}'.format(file_name, resource_dict['extension'])
                 if not os.path.exists(full_file_name):
                     download_to_file(url, full_file_name)
     print('All requested resources have been downloaded')

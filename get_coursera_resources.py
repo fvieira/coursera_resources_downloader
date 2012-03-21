@@ -80,19 +80,32 @@ def compare_sections(s1, s2):
         return s1[1] - s2[1]
     assert False
 
+def get_browser():
+    browser = mechanize.Browser()
+    browser.set_handle_robots(False)
+    return browser
 
-def main():
-    parser = argparse.ArgumentParser(description='Gets lecture resources (videos by default) of an online Coursera course.')
-    parser.add_argument('course_id', help='Course identifier (found in URL after www.coursera.org)')
-    parser.add_argument('email', help='Your coursera email.')
-    parser.add_argument('password', nargs='?', default=None, help='Your coursera password. You can omit it in the command line and provide it interactively.')
-    parser.add_argument('--pdfs', action='store_true', help='Get the pdfs for each lecture. Disabled by default.')
-    parser.add_argument('--pptx', action='store_true', help='Get the pptx\'s for each lecture. Disabled by default.')
-    parser.add_argument('--subs', action='store_true', help='Get the subtitles for each lecture. Disabled by default.')
-    parser.add_argument('--no-video', dest='video', action='store_false', help='Do not download the videos. Use this if you only want other resources such as pdfs.')
-    parser.add_argument('--section-lecture-format', dest='section_lecture_format', action='store_true', help='Use the section number on the name of lectures. Ex: file abc which belongs to the first lecture of section 2 will get named 2.1 - abc')
-    args = parser.parse_args()
 
+COURSE_URL_RE = re.compile(r'http://www.(.*)-class.org/')
+def list_course_ids(args):
+    home_page_url = 'https://www.coursera.org/landing/hub.php'
+    browser = get_browser()
+    try:
+        doc = browser.open(home_page_url).read()
+    except mechanize.HTTPError:
+        print('ERROR: Failed to open home page for reasons unknown')
+        sys.exit()
+    tree = etree.HTML(doc)
+    all_urls = tree.xpath('//a/@href')
+    ids = []
+    for url in all_urls:
+        match = COURSE_URL_RE.match(url)
+        if match:
+            ids.append(match.groups()[0].replace('-', ''))
+    print('\n'.join(sorted(ids)))
+
+
+def download_course_resources(args):
     if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS):
         print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
         sys.exit()
@@ -103,9 +116,8 @@ def main():
 
     course_url = 'https://www.coursera.org/{0}/lecture/index'.format(args.course_id)
 
+    browser = get_browser()
     print('Authenticating')
-    browser = mechanize.Browser()
-    browser.set_handle_robots(False)
     ## auth for one, auth for all (i.e. crypto doesn't matter)
     auth_url = 'https://www.coursera.org/crypto/auth/auth_redirector?type=login&subtype=normal&email=&minimal=true'
     browser.open(auth_url)
@@ -170,6 +182,28 @@ def main():
                     open_url = browser.open(url)
                     download_to_file(open_url, full_file_name)
     print('All requested resources have been downloaded')
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Automatize tasks in Coursera course\'s sites. (Downloading resources is pretty much all it can do now but more functionalities might get added latter)')
+    subparsers = parser.add_subparsers(help='Available subcommands.')
+    dl_res_parser = subparsers.add_parser('dl_res', help='Gets lecture resources (videos by default) of an online Coursera course.')
+    dl_res_parser.add_argument('course_id', help='Course identifier. Run the script once with the subcommand list-course-ids to see the ones available.')
+    dl_res_parser.add_argument('email', help='Your coursera email.')
+    dl_res_parser.add_argument('password', nargs='?', default=None, help='Your coursera password. You can omit it in the command line and provide it interactively.')
+    dl_res_parser.add_argument('--pdfs', action='store_true', help='Get the pdfs for each lecture. Disabled by default.')
+    dl_res_parser.add_argument('--pptx', action='store_true', help='Get the pptx\'s for each lecture. Disabled by default.')
+    dl_res_parser.add_argument('--subs', action='store_true', help='Get the subtitles for each lecture. Disabled by default.')
+    dl_res_parser.add_argument('--no-video', dest='video', action='store_false', help='Do not download the videos. Use this if you only want other resources such as pdfs.')
+    dl_res_parser.add_argument('--section-lecture-format', dest='section_lecture_format', action='store_true', help='Use the section number on the name of lectures. Ex: file abc which belongs to the first lecture of section 2 will get named 2.1 - abc.')
+    dl_res_parser.set_defaults(func=download_course_resources)
+
+    lst_ids_parser = subparsers.add_parser('list-course-ids', help='Use this option to get a list of the available course ids.')
+    lst_ids_parser.set_defaults(func=list_course_ids)
+
+    args = parser.parse_args()
+    args.func(args)
+
 
 if __name__ == '__main__':
     main()

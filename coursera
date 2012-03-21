@@ -20,11 +20,13 @@ MAX_WIN_FILE_SIZE = 50
 MAX_LINUX_FILE_SIZE = 140
 IS_WINDOWS = platform.system() == 'Windows'
 
+
 def make_valid_filename(filename):
     if IS_WINDOWS:
         return ''.join((c if c in WIN_VALID_CHARS else '_') for c in filename)[:MAX_WIN_FILE_SIZE]
     else:
         return filename.replace(os.sep, '_')[:MAX_LINUX_FILE_SIZE]
+
 
 # Based in PabloG answer at http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python
 def download_to_file(open_url, file_name):
@@ -63,6 +65,7 @@ def clean_lecture_name(lecture_name):
         lecture_name = lecture_name.rpartition('(')[0]
     return lecture_name.strip()
 
+
 WEEK_RE = re.compile(r'(.*)\(week (\d+)\)$')
 def take_week_from_section(section):
     week = 0
@@ -73,12 +76,14 @@ def take_week_from_section(section):
         week = int(week)
     return section, week
 
+
 def compare_sections(s1, s2):
     if (s1[1] != s2[1]):
         return s1[1] - s2[1]
     if (s1[2] != s2[2]):
         return s1[1] - s2[1]
     assert False
+
 
 def get_browser():
     browser = mechanize.Browser()
@@ -113,10 +118,12 @@ def download_course_resources(args):
     if not args.password:
         args.password = getpass.getpass('Coursera password: ')
 
-
     course_url = 'https://www.coursera.org/{0}/lecture/index'.format(args.course_id)
 
     browser = get_browser()
+
+    # Thanks to Andrew (https://github.com/andrewhn) for allowing me to
+    # base my authentication code on his script at https://gist.github.com/2001410
     print('Authenticating')
     ## auth for one, auth for all (i.e. crypto doesn't matter)
     auth_url = 'https://www.coursera.org/crypto/auth/auth_redirector?type=login&subtype=normal&email=&minimal=true'

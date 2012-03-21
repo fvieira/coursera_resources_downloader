@@ -10,10 +10,10 @@ import sys
 import os
 import re
 
-RESOURCE_DICTS = [{'arg': 'pdfs',  'extension': 'pdf'},
-                  {'arg': 'pptx',  'extension': 'pptx'},
-                  {'arg': 'subs',  'extension': 'srt'},
-                  {'arg': 'video', 'extension': 'mp4'}]
+RESOURCE_DICTS_BY_IMG = {'https://www.coursera.org/assets/core/images/filetype_icons/pdf.png': {'arg': 'pdfs',  'extension': 'pdf'},
+                         'https://www.coursera.org/assets/core/images/filetype_icons/ppt.png': {'arg': 'pptx',  'extension': 'pptx'},
+                         'https://www.coursera.org/assets/core/images/filetype_icons/txt.png': {'arg': 'subs',  'extension': 'srt'},
+                         'https://www.coursera.org/assets/core/images/filetype_icons/download.png': {'arg': 'video', 'extension': 'mp4'}}
 
 WIN_VALID_CHARS = '-_.() ' + string.ascii_letters + string.digits
 MAX_WIN_FILE_SIZE = 50
@@ -111,7 +111,7 @@ def list_course_ids(args):
 
 
 def download_course_resources(args):
-    if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS):
+    if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS_BY_IMG.values()):
         print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
         sys.exit()
 
@@ -178,15 +178,20 @@ def download_course_resources(args):
             lecture_name = make_valid_filename(lecture_name)
             lecture_name = os.path.join(section_folder, lecture_name)
             final_lecture_names.append(lecture_name)
-        url_list = lecture_list_el.xpath('./li/div[@class="item_resource"]/a/@href')
-        for j, url in enumerate(url_list):
-            resource_dict = RESOURCE_DICTS[j%4]
-            if getattr(args, resource_dict['arg']):
-                file_name = final_lecture_names[j/4]
-                full_file_name = '{0}.{1}'.format(file_name, resource_dict['extension'])
-                if not os.path.exists(full_file_name):
-                    open_url = browser.open(url)
-                    download_to_file(open_url, full_file_name)
+        lecture_div_list = lecture_list_el.xpath('./li/div[@class="item_resource"]')
+        for final_lecture_name, lecture_div in zip(final_lecture_names, lecture_div_list):
+            url_list = lecture_div.xpath('./a/@href')
+            resource_img_list = lecture_div.xpath('./a/img/@src')
+            for resource_img, resource_dict in RESOURCE_DICTS_BY_IMG.items():
+                if getattr(args, resource_dict['arg']):
+                    filetype_urls = [url for url, img in zip(url_list, resource_img_list) if img == resource_img]
+                    add_ft_counter = len(filetype_urls) > 1
+                    for j, filetype_url in enumerate(filetype_urls, 1):
+                        ft_counter = '{}.'.format(j) if add_ft_counter else ''
+                        full_file_name = '{0}.{1}{2}'.format(final_lecture_name, ft_counter, resource_dict['extension'])
+                        if not os.path.exists(full_file_name):
+                            open_url = browser.open(filetype_url)
+                            download_to_file(open_url, full_file_name)
     print('All requested resources have been downloaded')
 
 

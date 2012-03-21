@@ -93,7 +93,7 @@ def main():
     args = parser.parse_args()
 
     if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS):
-        print('You disabled video download but didn\'t enable any other resource for download.')
+        print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
         sys.exit()
 
     opener = urllib2.build_opener()
@@ -105,7 +105,7 @@ def main():
     try:
         doc = urllib2.urlopen(course_url).read()
     except urllib2.HTTPError:
-        print('Failed to open lecture index page at {0}'.format(course_url))
+        print('ERROR: Failed to open lecture index page at {0}'.format(course_url))
         print('Please make sure the course identifier you provided ({0}) is correct.'.format(args.course_id))
         sys.exit()
 
@@ -114,7 +114,7 @@ def main():
     try:
         course_title = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')[0].strip()
     except IndexError:
-        print('Failed to find course title.')
+        print('ERROR: Failed to find course title.')
         print('This probably means the session cookie was incorrect and we failed to enter the lecture index page.')
         sys.exit()
     course_title = make_valid_filename(course_title)

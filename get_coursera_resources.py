@@ -1,9 +1,10 @@
 #! /usr/bin/env python
 from __future__ import print_function
 from lxml import etree
+import mechanize
 import argparse
 import platform
-import urllib2
+import getpass
 import string
 import sys
 import os
@@ -14,7 +15,7 @@ RESOURCE_DICTS = [{'arg': 'pdfs',  'extension': 'pdf'},
                   {'arg': 'subs',  'extension': 'srt'},
                   {'arg': 'video', 'extension': 'mp4'}]
 
-WIN_VALID_CHARS = "-_.() " + string.ascii_letters + string.digits
+WIN_VALID_CHARS = '-_.() ' + string.ascii_letters + string.digits
 MAX_WIN_FILE_SIZE = 50
 MAX_LINUX_FILE_SIZE = 140
 IS_WINDOWS = platform.system() == 'Windows'
@@ -26,8 +27,7 @@ def make_valid_filename(filename):
         return filename.replace(os.sep, '_')[:MAX_LINUX_FILE_SIZE]
 
 # Based in PabloG answer at http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python
-def download_to_file(url, file_name):
-    open_url = urllib2.urlopen(url)
+def download_to_file(open_url, file_name):
     with open(file_name, 'wb') as f:
         meta = open_url.info()
         length_headers = meta.getheaders('Content-Length')
@@ -84,7 +84,8 @@ def compare_sections(s1, s2):
 def main():
     parser = argparse.ArgumentParser(description='Gets lecture resources (videos by default) of an online Coursera course.')
     parser.add_argument('course_id', help='Course identifier (found in URL after www.coursera.org)')
-    parser.add_argument('session_cookie', help='Valid session cookie for the course site. The cookie name is "session".')
+    parser.add_argument('email', help='Your coursera email.')
+    parser.add_argument('password', nargs='?', default=None, help='Your coursera password. You can omit it in the command line and provide it interactively.')
     parser.add_argument('--pdfs', action='store_true', help='Get the pdfs for each lecture. Disabled by default.')
     parser.add_argument('--pptx', action='store_true', help='Get the pptx\'s for each lecture. Disabled by default.')
     parser.add_argument('--subs', action='store_true', help='Get the subtitles for each lecture. Disabled by default.')
@@ -96,27 +97,39 @@ def main():
         print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
         sys.exit()
 
-    opener = urllib2.build_opener()
-    opener.addheaders.append(('Cookie', 'session={0}'.format(args.session_cookie)))
-    urllib2.install_opener(opener)
+    if not args.password:
+        args.password = getpass.getpass('Coursera password: ')
+
+
     course_url = 'https://www.coursera.org/{0}/lecture/index'.format(args.course_id)
+
+    print('Authenticating')
+    browser = mechanize.Browser()
+    browser.set_handle_robots(False)
+    ## auth for one, auth for all (i.e. crypto doesn't matter)
+    auth_url = 'https://www.coursera.org/crypto/auth/auth_redirector?type=login&subtype=normal&email=&minimal=true'
+    browser.open(auth_url)
+    ## unnamed form
+    browser.select_form(nr=0)
+    browser['email'] = args.email
+    browser['password'] = args.password
+    browser.submit()
+    if 'Login Failed' in browser.title():
+        print('ERROR: Authentication failed, please check your email and password.')
+        sys.exit()
+    print('Authentication successful')
 
     print('Trying to open lecture index page')
     try:
-        doc = urllib2.urlopen(course_url).read()
-    except urllib2.HTTPError:
+        doc = browser.open(course_url).read()
+    except mechanize.HTTPError:
         print('ERROR: Failed to open lecture index page at {0}'.format(course_url))
         print('Please make sure the course identifier you provided ({0}) is correct.'.format(args.course_id))
         sys.exit()
 
     print('Done')
     tree = etree.HTML(doc)
-    try:
-        course_title = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')[0].strip()
-    except IndexError:
-        print('ERROR: Failed to find course title.')
-        print('This probably means the session cookie was incorrect and we failed to enter the lecture index page.')
-        sys.exit()
+    course_title = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')[0].strip()
     course_title = make_valid_filename(course_title)
 
     item_list = tree.xpath('//div[@class="item_list"]')[0]
@@ -154,7 +167,8 @@ def main():
                 file_name = final_lecture_names[j/4]
                 full_file_name = '{0}.{1}'.format(file_name, resource_dict['extension'])
                 if not os.path.exists(full_file_name):
-                    download_to_file(url, full_file_name)
+                    open_url = browser.open(url)
+                    download_to_file(open_url, full_file_name)
     print('All requested resources have been downloaded')
 
 if __name__ == '__main__':

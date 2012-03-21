@@ -125,8 +125,7 @@ def download_course_resources(args):
     # Thanks to Andrew (https://github.com/andrewhn) for allowing me to
     # base my authentication code on his script at https://gist.github.com/2001410
     print('Authenticating')
-    ## auth for one, auth for all (i.e. crypto doesn't matter)
-    auth_url = 'https://www.coursera.org/crypto/auth/auth_redirector?type=login&subtype=normal&email=&minimal=true'
+    auth_url = 'https://www.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal&email=&minimal=true'.format(args.course_id)
     browser.open(auth_url)
     ## unnamed form
     browser.select_form(nr=0)

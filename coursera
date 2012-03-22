@@ -10,10 +10,11 @@ import sys
 import os
 import re
 
-RESOURCE_DICTS_BY_IMG = {'https://www.coursera.org/assets/core/images/filetype_icons/pdf.png': {'arg': 'pdfs',  'extension': 'pdf'},
-                         'https://www.coursera.org/assets/core/images/filetype_icons/ppt.png': {'arg': 'pptx',  'extension': 'pptx'},
-                         'https://www.coursera.org/assets/core/images/filetype_icons/txt.png': {'arg': 'subs',  'extension': 'srt'},
-                         'https://www.coursera.org/assets/core/images/filetype_icons/download.png': {'arg': 'video', 'extension': 'mp4'}}
+RESOURCE_DICTS_BY_I_CLASS = {'icon-file': {'arg': 'pdfs',  'extension': 'pdf'},
+                             'icon-picture': {'arg': 'pptx',  'extension': 'pptx'},
+                             'icon-align-justify': {'arg': 'txt',  'extension': 'txt'},
+                             'icon-list': {'arg': 'subs',  'extension': 'srt'},
+                             'icon-download-alt': {'arg': 'video', 'extension': 'mp4'}}
 
 WIN_VALID_CHARS = '-_.() ' + string.ascii_letters + string.digits
 MAX_WIN_FILE_SIZE = 50
@@ -111,7 +112,7 @@ def list_course_ids(args):
 
 
 def download_course_resources(args):
-    if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS_BY_IMG.values()):
+    if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS_BY_I_CLASS.values()):
         print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
         sys.exit()
 
@@ -168,7 +169,7 @@ def download_course_resources(args):
         section_folder = os.path.join(course_title, section)
         if not os.path.exists(section_folder):
             os.makedirs(section_folder)
-        lecture_names = lecture_list_el.xpath('./li/a/text()')
+        lecture_names = [name for name in lecture_list_el.xpath('./li/a/text()') if name.strip()]
         final_lecture_names = []
         for j, lecture_name in enumerate(lecture_names, 1):
             lecture_name = clean_lecture_name(lecture_name)
@@ -181,10 +182,10 @@ def download_course_resources(args):
         lecture_div_list = lecture_list_el.xpath('./li/div[@class="item_resource"]')
         for final_lecture_name, lecture_div in zip(final_lecture_names, lecture_div_list):
             url_list = lecture_div.xpath('./a/@href')
-            resource_img_list = lecture_div.xpath('./a/img/@src')
-            for resource_img, resource_dict in RESOURCE_DICTS_BY_IMG.items():
+            resource_icon_class_list = [classes.split(' ')[0] for classes in lecture_div.xpath('./a/i/@class')]
+            for resource_img, resource_dict in RESOURCE_DICTS_BY_I_CLASS.items():
                 if getattr(args, resource_dict['arg']):
-                    filetype_urls = [url for url, img in zip(url_list, resource_img_list) if img == resource_img]
+                    filetype_urls = [url for url, img in zip(url_list, resource_icon_class_list) if img == resource_img]
                     add_ft_counter = len(filetype_urls) > 1
                     for j, filetype_url in enumerate(filetype_urls, 1):
                         ft_counter = '{}.'.format(j) if add_ft_counter else ''
@@ -204,7 +205,8 @@ def main():
     dl_res_parser.add_argument('password', nargs='?', default=None, help='Your coursera password. You can omit it in the command line and provide it interactively.')
     dl_res_parser.add_argument('--pdfs', action='store_true', help='Get the pdfs for each lecture. Disabled by default.')
     dl_res_parser.add_argument('--pptx', action='store_true', help='Get the pptx\'s for each lecture. Disabled by default.')
-    dl_res_parser.add_argument('--subs', action='store_true', help='Get the subtitles for each lecture. Disabled by default.')
+    dl_res_parser.add_argument('--txt', action='store_true', help='Get the text subtitles for each lecture. Disabled by default.')
+    dl_res_parser.add_argument('--subs', action='store_true', help='Get the srt subtitles for each lecture. Disabled by default.')
     dl_res_parser.add_argument('--no-video', dest='video', action='store_false', help='Do not download the videos. Use this if you only want other resources such as pdfs.')
     dl_res_parser.add_argument('--section-lecture-format', dest='section_lecture_format', action='store_true', help='Use the section number on the name of lectures. Ex: file abc which belongs to the first lecture of section 2 will get named 2.1 - abc.')
     dl_res_parser.set_defaults(func=download_course_resources)

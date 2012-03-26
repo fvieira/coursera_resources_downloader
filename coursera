@@ -119,7 +119,7 @@ def download_course_resources(args):
     if not args.password:
         args.password = getpass.getpass('Coursera password: ')
 
-    course_url = 'https://www.coursera.org/{0}/lecture/index'.format(args.course_id)
+    course_url = 'https://class.coursera.org/{0}/lecture/index'.format(args.course_id)
 
     browser = get_browser()
 

@@ -201,8 +201,16 @@ def download_course_resources(args):
                         ft_counter = '{}.'.format(j) if add_ft_counter else ''
                         full_file_name = '{0}.{1}{2}'.format(final_lecture_name, ft_counter, resource_dict['extension'])
                         if not os.path.exists(full_file_name):
-                            open_url = browser.open(filetype_url)
-                            download_to_file(open_url, full_file_name)
+                            try:
+                                open_url = browser.open(filetype_url)
+                                download_to_file(open_url, full_file_name)
+                            except Exception as err:
+                                print('ERROR: Could not download the following resource: {}'.format(filetype_url))
+                                print('Please check if you can download the resource manually.')
+                                print('If you can then this is a bug, so please report it on github and provide the following two lines:')
+                                print('URL: {}'.format(filetype_url))
+                                print('Err: {}'.format(str(err)))
+
     print('All requested resources have been downloaded')
 
 

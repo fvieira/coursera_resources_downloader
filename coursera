@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 from __future__ import print_function
+from multiprocessing import Pool
 from lxml import etree
 import mechanize
 import argparse
@@ -92,8 +93,6 @@ def get_browser():
     return browser
 
 
-COURSE_URL_RE = re.compile(r'http://www\..*-class\.org/')
-WELCOME_COURSE_URL_RE = re.compile(r'https://class\.coursera\.org/(.+)/auth/welcome')
 def list_course_ids(args):
     home_page_url = 'https://www.coursera.org/landing/hub.php'
     browser = get_browser()
@@ -104,14 +103,22 @@ def list_course_ids(args):
         sys.exit()
     tree = etree.HTML(doc)
     all_urls = tree.xpath('//a/@href')
-    ids = []
-    for url in all_urls:
-        if COURSE_URL_RE.match(url):
-            browser.open(url)
-            match = WELCOME_COURSE_URL_RE.match(browser.geturl())
-            if match:
-                ids.append(match.groups()[0])
+    pool = Pool(20)
+    ids = pool.map(get_id_from_url, all_urls)
+    ids = filter(None, ids)
     print('\n'.join(sorted(ids)))
+
+
+COURSE_URL_RE = re.compile(r'http://www\..*-class\.org/')
+WELCOME_COURSE_URL_RE = re.compile(r'https://class\.coursera\.org/(.+)/auth/welcome')
+def get_id_from_url(url):
+    if COURSE_URL_RE.match(url):
+        browser = get_browser()
+        browser.open(url)
+        match = WELCOME_COURSE_URL_RE.match(browser.geturl())
+        if match:
+            return match.groups()[0]
+    return None
 
 
 def download_course_resources(args):

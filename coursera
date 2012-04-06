@@ -130,7 +130,7 @@ def get_id_from_url(url):
 
 
 def download_course_resources(args):
-    if not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS_BY_I_CLASS.values()):
+    if not args.dl_all and not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS_BY_I_CLASS.values()):
         print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
         sys.exit()
 
@@ -202,7 +202,7 @@ def download_course_resources(args):
             url_list = lecture_div.xpath('./a/@href')
             resource_icon_class_list = [classes.split(' ')[0] for classes in lecture_div.xpath('./a/i/@class')]
             for resource_img, resource_dict in RESOURCE_DICTS_BY_I_CLASS.items():
-                if getattr(args, resource_dict['arg']):
+                if args.dl_all or getattr(args, resource_dict['arg']):
                     filetype_urls = [url for url, img in zip(url_list, resource_icon_class_list) if img == resource_img]
                     add_ft_counter = len(filetype_urls) > 1
                     for j, filetype_url in enumerate(filetype_urls, 1):
@@ -229,6 +229,7 @@ def main():
     dl_res_parser.add_argument('course_id', help='Course identifier. Run the script once with the subcommand list-course-ids to see the ones available.')
     dl_res_parser.add_argument('email', help='Your coursera email.')
     dl_res_parser.add_argument('password', nargs='?', default=None, help='Your coursera password. You can omit it in the command line and provide it interactively.')
+    dl_res_parser.add_argument('--all', dest='dl_all', action='store_true', help='Downloads all available resources (video, pdfs, pptx, etc.). Disabled by default.')
     dl_res_parser.add_argument('--pdfs', action='store_true', help='Get the pdfs for each lecture. Disabled by default.')
     dl_res_parser.add_argument('--pptx', action='store_true', help='Get the pptx\'s for each lecture. Disabled by default.')
     dl_res_parser.add_argument('--txt', action='store_true', help='Get the text subtitles for each lecture. Disabled by default.')

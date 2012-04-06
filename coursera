@@ -32,34 +32,42 @@ def make_valid_filename(filename):
 
 # Based in PabloG answer at http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python
 def download_to_file(open_url, file_name):
-    with open(file_name, 'wb') as f:
-        meta = open_url.info()
-        length_headers = meta.getheaders('Content-Length')
-        file_size = int(length_headers[0]) if length_headers else None
-        print('Downloading: {0}'.format(file_name))
+    try:
+        with open(file_name, 'wb') as f:
+            meta = open_url.info()
+            length_headers = meta.getheaders('Content-Length')
+            file_size = int(length_headers[0]) if length_headers else None
+            print('Downloading: {0}'.format(file_name))
 
-        file_size_dl = 0
-        block_sz = 8192
-        while True:
-            buf = open_url.read(block_sz)
-            if not buf:
-                break
+            file_size_dl = 0
+            block_sz = 8192
+            while True:
+                buf = open_url.read(block_sz)
+                if not buf:
+                    break
 
-            file_size_dl += len(buf)
-            f.write(buf)
-            fsdmb = '{0:d}'.format(file_size_dl / 1000000)
-            fsdkb = '{0:03d}'.format(file_size_dl / 1000 % 1000)
-            fsd = '{0}.{1}'.format(fsdmb, fsdkb)
-            if file_size:
-                fsmb = '{0:d}'.format(file_size / 1000000)
-                fskb = '{0:03d}'.format(file_size / 1000 % 1000)
-                fs = '{0}.{1}'.format(fsmb, fskb)
-                percentage = '{0:.2f}'.format(file_size_dl * 100. / file_size)
-                status = r'{0:>8s}/{1:s} Mb [{2}%]'.format(fsd, fs, percentage)
-            else:
-                status = r'{0:>8s} Mb'.format(fsd)
-            status = status + chr(8) * (len(status) + 1)
-            print(status, end='')
+                file_size_dl += len(buf)
+                f.write(buf)
+                fsdmb = '{0:d}'.format(file_size_dl / 1000000)
+                fsdkb = '{0:03d}'.format(file_size_dl / 1000 % 1000)
+                fsd = '{0}.{1}'.format(fsdmb, fsdkb)
+                if file_size:
+                    fsmb = '{0:d}'.format(file_size / 1000000)
+                    fskb = '{0:03d}'.format(file_size / 1000 % 1000)
+                    fs = '{0}.{1}'.format(fsmb, fskb)
+                    percentage = '{0:.2f}'.format(file_size_dl * 100. / file_size)
+                    status = r'{0:>8s}/{1:s} Mb [{2}%]'.format(fsd, fs, percentage)
+                else:
+                    status = r'{0:>8s} Mb'.format(fsd)
+                status = status + chr(8) * (len(status) + 1)
+                print(status, end='')
+    except KeyboardInterrupt:
+        print('\nDownload was interrupted. Removed partially downloaded file.')
+        os.remove(file_name)
+        sys.exit()
+    except Exception:
+        os.remove(file_name)
+        raise
 
 
 def clean_lecture_name(lecture_name):

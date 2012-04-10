@@ -101,32 +101,25 @@ def get_browser():
     return browser
 
 
+DATA_FORMAT = 'define\(\["js/collections/courses"\],function\(a\)\{return new a\((.*)\)\}\)'
+COURSES_RE = '\{id:\d+,.*?,title:"(.+?)",.*?,short_name:"(.+?)",.*?,status:(\d+)}'
 def list_course_ids(args):
-    home_page_url = 'https://www.coursera.org/landing/hub.php'
+    home_page_url = 'https://www.coursera.org/static/min/445280c31f89061672d5b00b72f0de755ce57eab/js/data/courses.js'
     browser = get_browser()
     try:
         doc = browser.open(home_page_url).read()
     except mechanize.HTTPError:
         print('ERROR: Failed to open home page for reasons unknown')
         sys.exit()
-    tree = etree.HTML(doc)
-    all_urls = tree.xpath('//a/@href')
-    pool = Pool(20)
-    ids = pool.map(get_id_from_url, all_urls)
-    ids = filter(None, ids)
-    print('\n'.join(sorted(ids)))
-
-
-COURSE_URL_RE = re.compile(r'http://www\..*-class\.org/')
-WELCOME_COURSE_URL_RE = re.compile(r'https://class\.coursera\.org/(.+)/auth/welcome')
-def get_id_from_url(url):
-    if COURSE_URL_RE.match(url):
-        browser = get_browser()
-        browser.open(url)
-        match = WELCOME_COURSE_URL_RE.match(browser.geturl())
-        if match:
-            return match.groups()[0]
-    return None
+    match = re.match(DATA_FORMAT, doc)
+    if match:
+        courses = match.groups()[0]
+        data = re.findall(COURSES_RE, courses)
+        ids = []
+        for title, short_name, status in data:
+            if int(status) in (1,2):
+                ids.append('{0} -> {1}'.format(short_name, title))
+        print('\n'.join(sorted(ids)))
 
 
 def download_course_resources(args):

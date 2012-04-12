@@ -14,6 +14,6 @@ setup(
       requires=[
           'argparse',
           'lxml',
-          'mechanize',
+          'requests',
       ],
 )

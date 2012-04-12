@@ -2,7 +2,8 @@
 from __future__ import print_function
 from multiprocessing import Pool
 from lxml import etree
-import mechanize
+import requests
+from requests.exceptions import RequestException
 import argparse
 import platform
 import getpass
@@ -31,18 +32,17 @@ def make_valid_filename(filename):
 
 
 # Based in PabloG answer at http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python
-def download_to_file(open_url, file_name):
+def download_to_file(raw_resp, file_name):
     try:
         with open(file_name, 'wb') as f:
-            meta = open_url.info()
-            length_headers = meta.getheaders('Content-Length')
-            file_size = int(length_headers[0]) if length_headers else None
+            length_header = raw_resp.getheader('content-length')
+            file_size = int(length_header) if length_header else None
             print('Downloading: {0}'.format(file_name))
 
             file_size_dl = 0
             block_sz = 8192
             while True:
-                buf = open_url.read(block_sz)
+                buf = raw_resp.read(block_sz)
                 if not buf:
                     break
 
@@ -95,20 +95,13 @@ def compare_sections(s1, s2):
     assert False
 
 
-def get_browser():
-    browser = mechanize.Browser()
-    browser.set_handle_robots(False)
-    return browser
-
-
 DATA_FORMAT = 'define\(\["js/collections/courses"\],function\(a\)\{return new a\((.*)\)\}\)'
 COURSES_RE = '\{id:\d+,.*?,title:"(.+?)",.*?,short_name:"(.+?)",.*?,status:(\d+)}'
 def list_course_ids(args):
     home_page_url = 'https://www.coursera.org/static/min/445280c31f89061672d5b00b72f0de755ce57eab/js/data/courses.js'
-    browser = get_browser()
     try:
-        doc = browser.open(home_page_url).read()
-    except mechanize.HTTPError:
+        doc = requests.get(home_page_url).text
+    except RequestException:
         print('ERROR: Failed to open home page for reasons unknown')
         sys.exit()
     match = re.match(DATA_FORMAT, doc)
@@ -130,35 +123,27 @@ def download_course_resources(args):
     if not args.password:
         args.password = getpass.getpass('Coursera password: ')
 
-    course_url = 'https://class.coursera.org/{0}/lecture/index'.format(args.course_id)
-
-    browser = get_browser()
-
-    # Thanks to Andrew (https://github.com/andrewhn) for allowing me to
-    # base my authentication code on his script at https://gist.github.com/2001410
     print('Authenticating')
-    auth_url = 'https://www.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal&email=&minimal=true'.format(args.course_id)
-    browser.open(auth_url)
-    ## unnamed form
-    browser.select_form(nr=0)
-    browser['email'] = args.email
-    browser['password'] = args.password
-    browser.submit()
-    if 'Login Failed' in browser.title():
+    data = {'email_address':args.email, 'password': args.password}
+    maestro_resp = requests.post('https://www.coursera.org/maestro/auth/api/user/login', data=data)
+    if maestro_resp.status_code == 401:
         print('ERROR: Authentication failed, please check your email and password.')
         sys.exit()
     print('Authentication successful')
 
+
     print('Trying to open lecture index page')
+    course_url = 'https://class.coursera.org/{0}/lecture/index'.format(args.course_id)
     try:
-        doc = browser.open(course_url).read()
-    except mechanize.HTTPError:
+        course_resp = requests.get('https://class.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal'.format(args.course_id), cookies=maestro_resp.cookies)
+        lecture_resp = requests.get('https://class.coursera.org/{0}/lecture/index'.format(args.course_id), cookies=course_resp.cookies)
+    except RequestException:
         print('ERROR: Failed to open lecture index page at {0}'.format(course_url))
         print('Please make sure the course identifier you provided ({0}) is correct.'.format(args.course_id))
         sys.exit()
 
     print('Done')
-    tree = etree.HTML(doc)
+    tree = etree.HTML(lecture_resp.text)
     course_title = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')[0].strip()
     course_title = make_valid_filename(course_title)
 
@@ -203,8 +188,8 @@ def download_course_resources(args):
                         full_file_name = '{0}.{1}{2}'.format(final_lecture_name, ft_counter, resource_dict['extension'])
                         if not os.path.exists(full_file_name):
                             try:
-                                open_url = browser.open(filetype_url)
-                                download_to_file(open_url, full_file_name)
+                                raw_resp = requests.get(filetype_url, cookies=course_resp.cookies).raw
+                                download_to_file(raw_resp, full_file_name)
                             except Exception as err:
                                 print('ERROR: Could not download the following resource: {}'.format(filetype_url))
                                 print('Please check if you can download the resource manually.')

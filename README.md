@@ -2,7 +2,7 @@ Installation
 ------------
 
 Coursera is just a script so you can run it without installing, all that is required is that you have the required dependencies installed.
-If you're not sure you can always install them with: `sudo pip install -r requirements.txt`
+If you're not sure you can install them with: `sudo pip install -r requirements.txt`
 
 A setup.py is also provided, although all it does is copying coursera to your PATH so you can run it anywhere.
 

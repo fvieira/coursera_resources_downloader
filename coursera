@@ -130,11 +130,12 @@ def download_resources(args):
         print('ERROR: Authentication failed, please check your email and password.')
         sys.exit()
     print('Authentication successful')
-    download_course_resources(args, maestro_resp.cookies, args.course_id)
+    for course_id in filter(None, args.course_ids.split(',')):
+        download_course_resources(args, maestro_resp.cookies, course_id)
 
 
 def download_course_resources(args, maestro_cookies, course_id):
-    print('Trying to open lecture index page for {0} course'.format(course_id))
+    print('Trying to open lecture index page for the {0} course'.format(course_id))
     course_url = 'https://class.coursera.org/{0}/lecture/index'.format(course_id)
     try:
         course_resp = requests.get('https://class.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal'.format(course_id), cookies=maestro_cookies)
@@ -199,14 +200,14 @@ def download_course_resources(args, maestro_cookies, course_id):
                                 print('URL: {}'.format(filetype_url))
                                 print('Err: {}'.format(str(err)))
 
-    print('All requested resources have been downloaded')
+    print('All requested resources for the {0} course have been downloaded'.format(course_id))
 
 
 def main():
     parser = argparse.ArgumentParser(description='Automatize tasks in Coursera course\'s sites. (Downloading resources is pretty much all it can do now but more functionalities might get added latter)')
     subparsers = parser.add_subparsers(help='Available subcommands.')
     dl_res_parser = subparsers.add_parser('dl_res', help='Gets lecture resources (videos by default) of an online Coursera course.')
-    dl_res_parser.add_argument('course_id', help='Course identifier. Run the script once with the subcommand list-course-ids to see the ones available.')
+    dl_res_parser.add_argument('course_ids', help='Course identifiers separated by commas. Run the script once with the subcommand list-course-ids to see the ones available.')
     dl_res_parser.add_argument('email', help='Your coursera email.')
     dl_res_parser.add_argument('password', nargs='?', default=None, help='Your coursera password. You can omit it in the command line and provide it interactively.')
     dl_res_parser.add_argument('--all', dest='dl_all', action='store_true', help='Downloads all available resources (video, pdfs, pptx, etc.). Disabled by default.')

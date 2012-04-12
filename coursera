@@ -103,7 +103,7 @@ def list_course_ids(args):
         doc = requests.get(home_page_url).text
     except RequestException:
         print('ERROR: Failed to open home page for reasons unknown')
-        sys.exit()
+        return
     match = re.match(DATA_FORMAT, doc)
     if match:
         courses = match.groups()[0]
@@ -118,7 +118,7 @@ def list_course_ids(args):
 def download_resources(args):
     if not args.dl_all and not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS_BY_I_CLASS.values()):
         print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
-        sys.exit()
+        return
 
     if not args.password:
         args.password = getpass.getpass('Coursera password: ')
@@ -128,9 +128,10 @@ def download_resources(args):
     maestro_resp = requests.post('https://www.coursera.org/maestro/auth/api/user/login', data=data)
     if maestro_resp.status_code == 401:
         print('ERROR: Authentication failed, please check your email and password.')
-        sys.exit()
+        return
     print('Authentication successful')
     for course_id in filter(None, args.course_ids.split(',')):
+        print()
         download_course_resources(args, maestro_resp.cookies, course_id)
 
 
@@ -140,14 +141,20 @@ def download_course_resources(args, maestro_cookies, course_id):
     try:
         course_resp = requests.get('https://class.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal'.format(course_id), cookies=maestro_cookies)
         lecture_resp = requests.get('https://class.coursera.org/{0}/lecture/index'.format(course_id), cookies=course_resp.cookies)
-    except RequestException:
+    except RequestException as err:
         print('ERROR: Failed to open lecture index page at {0}'.format(course_url))
-        print('Please make sure the course identifier you provided ({0}) is correct.'.format(course_id))
-        sys.exit()
+        print('This is probably a bug, so please report it on github and provide the following two lines:')
+        print('Err: {0}'.format(str(err)))
+        return
 
     print('Done')
     tree = etree.HTML(lecture_resp.text)
-    course_title = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')[0].strip()
+    course_title_element = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')
+    if not course_title_element:
+        print('ERROR: Failed to open lecture index page at {0}'.format(course_url))
+        print('Please make sure that you are enrolled in the {0} course and that it has already started.'.format(course_id))
+        return
+    course_title = course_title_element[0].strip()
     course_title = make_valid_filename(course_title)
 
     item_list = tree.xpath('//div[@class="item_list"]')[0]
@@ -187,18 +194,18 @@ def download_course_resources(args, maestro_cookies, course_id):
                     filetype_urls = [url for url, img in zip(url_list, resource_icon_class_list) if img == resource_img]
                     add_ft_counter = len(filetype_urls) > 1
                     for j, filetype_url in enumerate(filetype_urls, 1):
-                        ft_counter = '{}.'.format(j) if add_ft_counter else ''
+                        ft_counter = '{0}.'.format(j) if add_ft_counter else ''
                         full_file_name = '{0}.{1}{2}'.format(final_lecture_name, ft_counter, resource_dict['extension'])
                         if not os.path.exists(full_file_name):
                             try:
                                 raw_resp = requests.get(filetype_url, cookies=course_resp.cookies).raw
                                 download_to_file(raw_resp, full_file_name)
                             except Exception as err:
-                                print('ERROR: Could not download the following resource: {}'.format(filetype_url))
+                                print('ERROR: Could not download the following resource: {0}'.format(filetype_url))
                                 print('Please check if you can download the resource manually.')
                                 print('If you can then this is a bug, so please report it on github and provide the following two lines:')
-                                print('URL: {}'.format(filetype_url))
-                                print('Err: {}'.format(str(err)))
+                                print('URL: {0}'.format(filetype_url))
+                                print('Err: {0}'.format(str(err)))
 
     print('All requested resources for the {0} course have been downloaded'.format(course_id))
 

@@ -115,7 +115,7 @@ def list_course_ids(args):
         print('\n'.join(sorted(ids)))
 
 
-def download_course_resources(args):
+def download_resources(args):
     if not args.dl_all and not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS_BY_I_CLASS.values()):
         print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
         sys.exit()
@@ -130,16 +130,18 @@ def download_course_resources(args):
         print('ERROR: Authentication failed, please check your email and password.')
         sys.exit()
     print('Authentication successful')
+    download_course_resources(args, maestro_resp.cookies, args.course_id)
 
 
-    print('Trying to open lecture index page')
-    course_url = 'https://class.coursera.org/{0}/lecture/index'.format(args.course_id)
+def download_course_resources(args, maestro_cookies, course_id):
+    print('Trying to open lecture index page for {0} course'.format(course_id))
+    course_url = 'https://class.coursera.org/{0}/lecture/index'.format(course_id)
     try:
-        course_resp = requests.get('https://class.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal'.format(args.course_id), cookies=maestro_resp.cookies)
-        lecture_resp = requests.get('https://class.coursera.org/{0}/lecture/index'.format(args.course_id), cookies=course_resp.cookies)
+        course_resp = requests.get('https://class.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal'.format(course_id), cookies=maestro_cookies)
+        lecture_resp = requests.get('https://class.coursera.org/{0}/lecture/index'.format(course_id), cookies=course_resp.cookies)
     except RequestException:
         print('ERROR: Failed to open lecture index page at {0}'.format(course_url))
-        print('Please make sure the course identifier you provided ({0}) is correct.'.format(args.course_id))
+        print('Please make sure the course identifier you provided ({0}) is correct.'.format(course_id))
         sys.exit()
 
     print('Done')
@@ -214,7 +216,7 @@ def main():
     dl_res_parser.add_argument('--subs', action='store_true', help='Get the srt subtitles for each lecture. Disabled by default.')
     dl_res_parser.add_argument('--no-video', dest='video', action='store_false', help='Do not download the videos. Use this if you only want other resources such as pdfs.')
     dl_res_parser.add_argument('--section-lecture-format', dest='section_lecture_format', action='store_true', help='Use the section number on the name of lectures. Ex: file abc which belongs to the first lecture of section 2 will get named 2.1 - abc.')
-    dl_res_parser.set_defaults(func=download_course_resources)
+    dl_res_parser.set_defaults(func=download_resources)
 
     lst_ids_parser = subparsers.add_parser('list-course-ids', help='Use this option to get a list of the available course ids.')
     lst_ids_parser.set_defaults(func=list_course_ids)

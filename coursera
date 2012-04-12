@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from __future__ import print_function
+from __future__ import print_function, unicode_literals, division, absolute_import, with_statement
 from multiprocessing import Pool
 from lxml import etree
 import requests
@@ -11,6 +11,12 @@ import string
 import sys
 import os
 import re
+
+try:
+    range = xrange
+except NameError:
+    pass
+
 
 RESOURCE_DICTS_BY_I_CLASS = {'icon-file': {'arg': 'pdfs',  'extension': 'pdf'},
                              'icon-picture': {'arg': 'pptx',  'extension': 'pptx'},
@@ -48,14 +54,14 @@ def download_to_file(raw_resp, file_name):
 
                 file_size_dl += len(buf)
                 f.write(buf)
-                fsdmb = '{0:d}'.format(file_size_dl / 1000000)
-                fsdkb = '{0:03d}'.format(file_size_dl / 1000 % 1000)
+                fsdmb = '{0:d}'.format(file_size_dl // 1000000)
+                fsdkb = '{0:03d}'.format(file_size_dl // 1000 % 1000)
                 fsd = '{0}.{1}'.format(fsdmb, fsdkb)
                 if file_size:
-                    fsmb = '{0:d}'.format(file_size / 1000000)
-                    fskb = '{0:03d}'.format(file_size / 1000 % 1000)
+                    fsmb = '{0:d}'.format(file_size // 1000000)
+                    fskb = '{0:03d}'.format(file_size // 1000 % 1000)
                     fs = '{0}.{1}'.format(fsmb, fskb)
-                    percentage = '{0:.2f}'.format(file_size_dl * 100. / file_size)
+                    percentage = '{0:.2f}'.format(file_size_dl * 100. // file_size)
                     status = r'{0:>8s}/{1:s} Mb [{2}%]'.format(fsd, fs, percentage)
                 else:
                     status = r'{0:>8s} Mb'.format(fsd)
@@ -74,25 +80,6 @@ def clean_lecture_name(lecture_name):
     if '(' in lecture_name:
         lecture_name = lecture_name.rpartition('(')[0]
     return lecture_name.strip()
-
-
-WEEK_RE = re.compile(r'(.*)\(week (\d+)\)$')
-def take_week_from_section(section):
-    week = 0
-    match = WEEK_RE.match(section)
-    if match:
-        section, week = match.groups()
-        section = section.strip()
-        week = int(week)
-    return section, week
-
-
-def compare_sections(s1, s2):
-    if (s1[1] != s2[1]):
-        return s1[1] - s2[1]
-    if (s1[2] != s2[2]):
-        return s1[1] - s2[1]
-    assert False
 
 
 DATA_FORMAT = 'define\(\["js/collections/courses"\],function\(a\)\{return new a\((.*)\)\}\)'
@@ -160,17 +147,10 @@ def download_course_resources(args, maestro_cookies, course_id):
     item_list = tree.xpath('//div[@class="item_list"]')[0]
     print('Starting downloads')
     sections = []
-    for i in xrange(0, len(item_list)/2):
+    for i in range(len(item_list) // 2):
         section_el, lecture_list_el = item_list[2*i], item_list[2*i+1]
         section = section_el.xpath('./h3/text()')[0].strip()
-        no_week_section, week = take_week_from_section(section)
-        sections.append((no_week_section, week, i, lecture_list_el))
-    sections = sorted(sections, compare_sections)
-
-    for i, (no_week_section, week, _, lecture_list_el) in enumerate(sections, 1):
-        section = '{0} - {1}'.format(i, no_week_section)
-        if week:
-            section += ' (week {0})'.format(week)
+        section = '{0} - {1}'.format(i+1, section)
         section = make_valid_filename(section)
         section_folder = os.path.join(course_title, section)
         if not os.path.exists(section_folder):
@@ -181,7 +161,7 @@ def download_course_resources(args, maestro_cookies, course_id):
             lecture_name = clean_lecture_name(lecture_name)
             lecture_name = '{0} - {1}'.format(j, lecture_name)
             if args.section_lecture_format:
-                lecture_name = '{0}.{1}'.format(i, lecture_name)
+                lecture_name = '{0}.{1}'.format(i+1, lecture_name)
             lecture_name = make_valid_filename(lecture_name)
             lecture_name = os.path.join(section_folder, lecture_name)
             final_lecture_names.append(lecture_name)

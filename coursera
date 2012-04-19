@@ -8,6 +8,7 @@ import argparse
 import platform
 import getpass
 import string
+import json
 import sys
 import os
 import re
@@ -82,24 +83,19 @@ def clean_lecture_name(lecture_name):
     return lecture_name.strip()
 
 
-DATA_FORMAT = 'define\(\["js/collections/courses"\],function\(a\)\{return new a\((.*)\)\}\)'
-COURSES_RE = '\{id:\d+,.*?,title:"(.+?)",.*?,short_name:"(.+?)",.*?,status:(\d+)}'
-def list_course_ids(args):
-    home_page_url = 'https://www.coursera.org/static/min/445280c31f89061672d5b00b72f0de755ce57eab/js/data/courses.js'
+def list_courses(args):
+    home_page_url = 'https://www.coursera.org/maestro/auth/api/provost/topics'
     try:
         doc = requests.get(home_page_url).text
     except RequestException:
         print('ERROR: Failed to open home page for reasons unknown')
         return
-    match = re.match(DATA_FORMAT, doc)
-    if match:
-        courses = match.groups()[0]
-        data = re.findall(COURSES_RE, courses)
-        ids = []
-        for title, short_name, status in data:
-            if int(status) in (1,2):
-                ids.append('{0} -> {1}'.format(short_name, title))
-        print('\n'.join(sorted(ids)))
+    courses = json.loads(doc)
+    out = []
+    for course in courses:
+        universities = ','.join(univ['name'] for univ in course['universities'])
+        out.append('{0}   ->   {1}   by   {2}'.format(course['short_name'], course['title'], universities))
+    print('\n'.join(sorted(out)))
 
 
 def download_resources(args):
@@ -194,7 +190,7 @@ def main():
     parser = argparse.ArgumentParser(description='Automatize tasks in Coursera course\'s sites. (Downloading resources is pretty much all it can do now but more functionalities might get added latter)')
     subparsers = parser.add_subparsers(help='Available subcommands.')
     dl_res_parser = subparsers.add_parser('dl-res', help='Gets lecture resources (videos by default) of an online Coursera course.')
-    dl_res_parser.add_argument('course_ids', help='Course identifiers separated by commas. Run the script once with the subcommand list-course-ids to see the ones available.')
+    dl_res_parser.add_argument('course_ids', help='Course identifiers separated by commas. Run the script once with the subcommand list-courses to see the ones available.')
     dl_res_parser.add_argument('email', help='Your coursera email.')
     dl_res_parser.add_argument('password', nargs='?', default=None, help='Your coursera password. You can omit it in the command line and provide it interactively.')
     dl_res_parser.add_argument('--all', dest='dl_all', action='store_true', help='Downloads all available resources (video, pdfs, pptx, etc.). Disabled by default.')
@@ -206,8 +202,8 @@ def main():
     dl_res_parser.add_argument('--section-lecture-format', dest='section_lecture_format', action='store_true', help='Use the section number on the name of lectures. Ex: file abc which belongs to the first lecture of section 2 will get named 2.1 - abc.')
     dl_res_parser.set_defaults(func=download_resources)
 
-    lst_ids_parser = subparsers.add_parser('list-course-ids', help='Use this option to get a list of the available course ids.')
-    lst_ids_parser.set_defaults(func=list_course_ids)
+    lst_ids_parser = subparsers.add_parser('list-courses', help='Use this option to get a list of the available courses in the format "course_id -> full_course_name by univ(s)"')
+    lst_ids_parser.set_defaults(func=list_courses)
 
     args = parser.parse_args()
     args.func(args)

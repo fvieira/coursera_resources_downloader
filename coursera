@@ -193,7 +193,7 @@ def download_course_resources(args, maestro_cookies, course_id):
 def main():
     parser = argparse.ArgumentParser(description='Automatize tasks in Coursera course\'s sites. (Downloading resources is pretty much all it can do now but more functionalities might get added latter)')
     subparsers = parser.add_subparsers(help='Available subcommands.')
-    dl_res_parser = subparsers.add_parser('dl_res', help='Gets lecture resources (videos by default) of an online Coursera course.')
+    dl_res_parser = subparsers.add_parser('dl-res', help='Gets lecture resources (videos by default) of an online Coursera course.')
     dl_res_parser.add_argument('course_ids', help='Course identifiers separated by commas. Run the script once with the subcommand list-course-ids to see the ones available.')
     dl_res_parser.add_argument('email', help='Your coursera email.')
     dl_res_parser.add_argument('password', nargs='?', default=None, help='Your coursera password. You can omit it in the command line and provide it interactively.')

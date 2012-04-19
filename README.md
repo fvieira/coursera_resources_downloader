@@ -11,4 +11,4 @@ Usage
 
 To start using the script run it as `./coursera -h` to see the help message.
 
-If you are in a hurry, you can just skip it and run `./coursera dl_res crypto,algo 'your.email@example.com' 'your_password'` to start downloading videos from your courses (which are crypto and algo in the example).
+If you are in a hurry, you can just skip it and run `./coursera dl-res crypto,algo 'your.email@example.com' 'your_password'` to start downloading videos from your courses (which are crypto and algo in the example).

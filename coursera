@@ -168,7 +168,7 @@ def download_course_resources(args, maestro_cookies, course_id):
         section = section_el.xpath('./h3/text()')[0].strip()
         section = '{0} - {1}'.format(i + 1, section)
         section = make_valid_filename(section)
-        section_folder = os.path.join(course_title, section)
+        section_folder = os.path.join(course_title, course_id, section)
         if not os.path.exists(section_folder):
             os.makedirs(section_folder)
         lecture_names = [name for name in lecture_list_el.xpath('./li/a/text()') if name.strip()]

@@ -29,6 +29,9 @@ MAX_WIN_FILE_SIZE = 50
 MAX_LINUX_FILE_SIZE = 140
 IS_WINDOWS = platform.system() == 'Windows'
 
+COURSE_URL_RE = re.compile('https://class.coursera.org/(.*)/')
+
+
 class BadCourseraException(Exception):
     pass
 
@@ -89,17 +92,33 @@ def clean_lecture_name(lecture_name):
     return lecture_name.strip()
 
 
-def list_courses(args):
-    home_page_url = 'https://www.coursera.org/maestro/auth/api/provost/topics'
+def get_courses_data():
+    courses_json_url = 'https://www.coursera.org/maestro/auth/api/provost/topics'
     try:
-        doc = requests.get(home_page_url).text
+        courses_json = requests.get(courses_json_url).text
     except RequestException:
         raise BadCourseraException('Failed to open courses JSON url for reasons unknown')
-    courses = json.loads(doc)
+    return json.loads(courses_json)
+
+
+def get_id_from_url(url):
+    match = COURSE_URL_RE.match(url)
+    if match and match.groups():
+        return match.groups()[0]
+    else:
+        raise BadCourseraException('Course url ({0}) did not match regexp ({1})'.format(url, COURSE_URL_RE.pattern))
+
+
+
+def list_courses(args):
+    courses = get_courses_data()
     out = []
     for course in courses:
         universities = ','.join(univ['name'] for univ in course['universities'])
-        out.append('{0}   ->   {1}   by   {2}'.format(course['short_name'], course['title'], universities))
+        for edition in course['courses']:
+            if edition['active'] == '1':
+                edition_id = get_id_from_url(edition['home_link'])
+                out.append('{0}   ->   {1}   by   {2}    (starting {3})'.format(edition_id, course['title'], universities, edition['start_date_string']))
     print('\n'.join(sorted(out)))
 
 

@@ -29,6 +29,13 @@ MAX_WIN_FILE_SIZE = 50
 MAX_LINUX_FILE_SIZE = 140
 IS_WINDOWS = platform.system() == 'Windows'
 
+class BadCourseraException(Exception):
+    pass
+
+
+class BadUserException(Exception):
+    pass
+
 
 def make_valid_filename(filename):
     if IS_WINDOWS:
@@ -87,8 +94,7 @@ def list_courses(args):
     try:
         doc = requests.get(home_page_url).text
     except RequestException:
-        print('ERROR: Failed to open home page for reasons unknown')
-        return
+        raise BadCourseraException('Failed to open courses JSON url for reasons unknown')
     courses = json.loads(doc)
     out = []
     for course in courses:
@@ -99,8 +105,7 @@ def list_courses(args):
 
 def download_resources(args):
     if not args.dl_all and not any(getattr(args, res_dict['arg']) for res_dict in RESOURCE_DICTS_BY_I_CLASS.values()):
-        print('ERROR: You disabled video download but didn\'t enable any other resource for download.')
-        return
+        raise BadUserException('You disabled video download but didn\'t enable any other resource for download.')
 
     if not args.password:
         args.password = getpass.getpass('Coursera password: ')
@@ -109,8 +114,7 @@ def download_resources(args):
     data = {'email_address': args.email, 'password': args.password}
     maestro_resp = requests.post('https://www.coursera.org/maestro/auth/api/user/login', data=data)
     if maestro_resp.status_code == 401:
-        print('ERROR: Authentication failed, please check your email and password.')
-        return
+        raise BadUserException('Authentication failed, please check your email and password.')
     print('Authentication successful')
     for course_id in filter(None, args.course_ids.split(',')):
         print()
@@ -124,18 +128,17 @@ def download_course_resources(args, maestro_cookies, course_id):
         course_resp = requests.get('https://class.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal'.format(course_id), cookies=maestro_cookies)
         lecture_resp = requests.get('https://class.coursera.org/{0}/lecture/index'.format(course_id), cookies=course_resp.cookies)
     except RequestException as err:
-        print('ERROR: Failed to open lecture index page at {0}'.format(course_url))
-        print('This is probably a bug, so please report it on github and provide the following two lines:')
-        print('Err: {0}'.format(str(err)))
-        return
+        raise BadCourseraException('Failed to open lecture index page at {0}' \
+        '\nThis is probably a bug, so please report it on github and provide the following two lines:' \
+        '\nURL: {0}' \
+        '\nErr: {1}'.format(course_url, str(err)))
 
     print('Done')
     tree = etree.HTML(lecture_resp.text)
     course_title_element = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')
     if not course_title_element:
-        print('ERROR: Failed to open lecture index page at {0}'.format(course_url))
-        print('Please make sure that you are enrolled in the {0} course and that it has already started.'.format(course_id))
-        return
+        raise BadUserException('Failed to open lecture index page at {0}' \
+        '\nPlease make sure that you are enrolled in the {1} course and that it has already started.'.format(course_url, course_id))
     course_title = course_title_element[0].strip()
     course_title = make_valid_filename(course_title)
 
@@ -175,11 +178,11 @@ def download_course_resources(args, maestro_cookies, course_id):
                                 raw_resp = requests.get(filetype_url, cookies=course_resp.cookies).raw
                                 download_to_file(raw_resp, full_file_name)
                             except Exception as err:
-                                print('ERROR: Could not download the following resource: {0}'.format(filetype_url))
-                                print('Please check if you can download the resource manually.')
-                                print('If you can then this is a bug, so please report it on github and provide the following two lines:')
-                                print('URL: {0}'.format(filetype_url))
-                                print('Err: {0}'.format(str(err)))
+                                raise BadCourseraException('Could not download the following resource: {0}' \
+                                '\nPlease check if you can download the resource manually.' \
+                                '\nIf you can then this is a bug, so please report it on github and provide the following two lines:' \
+                                '\nURL: {0}' \
+                                '\nErr: {1}'.format(filetype_url, str(err)))
 
     print('All requested resources for the {0} course have been downloaded'.format(course_id))
 
@@ -204,7 +207,10 @@ def main():
     lst_ids_parser.set_defaults(func=list_courses)
 
     args = parser.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except (BadCourseraException, BadUserException) as err:
+        print('\nERROR: {0}'.format(err.message))
 
 
 if __name__ == '__main__':

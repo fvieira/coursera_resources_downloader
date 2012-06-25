@@ -154,9 +154,9 @@ def download_course_resources(args, maestro_cookies, course_id):
 
     print('Done')
     tree = etree.HTML(lecture_resp.text)
-    course_title_element = tree.xpath('//div[@id="course-logo-text"]/a/img/@alt')
+    course_title_element = tree.xpath('//div[@class="course-logo-name"]/nobr/text()')
     if not course_title_element:
-        raise BadUserException('Failed to open lecture index page at {0}' \
+        raise BadUserException('Failed to get the course title at {0}' \
         '\nPlease make sure that you are enrolled in the {1} course and that it has already started.'.format(course_url, course_id))
     course_title = course_title_element[0].strip()
     course_title = make_valid_filename(course_title)

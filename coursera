@@ -148,16 +148,16 @@ def download_course_resources(args, maestro_cookies, course_id):
         lecture_resp = requests.get('https://class.coursera.org/{0}/lecture/index'.format(course_id), cookies=course_resp.cookies)
     except RequestException as err:
         raise BadCourseraException('Failed to open lecture index page at {0}' \
-        '\nThis is probably a bug, so please report it on github and provide the following two lines:' \
-        '\nURL: {0}' \
-        '\nErr: {1}'.format(course_url, str(err)))
+                '\nThis is probably a bug, so please report it on github and provide the following two lines:' \
+                '\nURL: {0}' \
+                '\nErr: {1}'.format(course_url, str(err)))
 
     print('Done')
     tree = etree.HTML(lecture_resp.text)
     course_title_element = tree.xpath('//div[@class="course-logo-name"]/nobr/text()')
     if not course_title_element:
         raise BadUserException('Failed to get the course title at {0}' \
-        '\nPlease make sure that you are enrolled in the {1} course and that it has already started.'.format(course_url, course_id))
+                '\nPlease make sure that you are enrolled in the {1} course and that it has already started.'.format(course_url, course_id))
     course_title = course_title_element[0].strip()
     course_title = make_valid_filename(course_title)
 
@@ -198,10 +198,10 @@ def download_course_resources(args, maestro_cookies, course_id):
                                 download_to_file(raw_resp, full_file_name)
                             except Exception as err:
                                 raise BadCourseraException('Could not download the following resource: {0}' \
-                                '\nPlease check if you can download the resource manually.' \
-                                '\nIf you can then this is a bug, so please report it on github and provide the following two lines:' \
-                                '\nURL: {0}' \
-                                '\nErr: {1}'.format(filetype_url, str(err)))
+                                        '\nPlease check if you can download the resource manually.' \
+                                        '\nIf you can then this is a bug, so please report it on github and provide the following two lines:' \
+                                        '\nURL: {0}' \
+                                        '\nErr: {1}'.format(filetype_url, str(err)))
 
     print('All requested resources for the {0} course have been downloaded'.format(course_id))
 

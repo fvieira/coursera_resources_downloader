@@ -93,7 +93,7 @@ def clean_lecture_name(lecture_name):
 
 
 def get_courses_data():
-    courses_json_url = 'https://www.coursera.org/maestro/auth/api/provost/topics'
+    courses_json_url = 'https://www.coursera.org/maestro/api/topic/list?full=1'
     try:
         courses_json = requests.get(courses_json_url).text
     except RequestException:
@@ -114,11 +114,11 @@ def list_courses(args):
     courses = get_courses_data()
     out = []
     for course in courses:
-        universities = ','.join(univ['name'] for univ in course['universities'])
+        universities = ', '.join([university['name'] for university in course['universities']])
         for edition in course['courses']:
-            if edition['active'] == '1':
+            if edition['active']:
                 edition_id = get_id_from_url(edition['home_link'])
-                out.append('{0}   ->   {1}   by   {2}    (starting {3})'.format(edition_id, course['title'], universities, edition['start_date_string']))
+                out.append('{0}   ->   {1}   by   {2}    (starting {3})'.format(edition_id, course['name'], universities, edition['start_date_string']))
     print('\n'.join(sorted(out)))
 
 

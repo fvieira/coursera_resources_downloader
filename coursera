@@ -131,21 +131,25 @@ def download_resources(args):
 
     print('Authenticating')
     data = {'email_address': args.email, 'password': args.password}
-    maestro_resp = requests.post('https://www.coursera.org/maestro/auth/api/user/login', data=data)
+    requests_session = requests.session()
+    maestro_resp = requests_session.post('https://www.coursera.org/maestro/api/user/login', data=data)
     if maestro_resp.status_code == 401:
         raise BadUserException('Authentication failed, please check your email and password.')
+    elif maestro_resp.status_code == 404:
+        raise BadUserException('Wrong url for authentication. This means the coursera site changed '\
+                'and the script needs to be updated. Please report this on github. Thanks.')
     print('Authentication successful')
     for course_id in filter(None, args.course_ids.split(',')):
         print()
-        download_course_resources(args, maestro_resp.cookies, course_id)
+        download_course_resources(args, requests_session, course_id)
 
 
-def download_course_resources(args, maestro_cookies, course_id):
+def download_course_resources(args, requests_session, course_id):
     print('Trying to open lecture index page for the {0} course'.format(course_id))
     course_url = 'https://class.coursera.org/{0}/lecture/index'.format(course_id)
     try:
-        course_resp = requests.get('https://class.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal'.format(course_id), cookies=maestro_cookies)
-        lecture_resp = requests.get('https://class.coursera.org/{0}/lecture/index'.format(course_id), cookies=course_resp.cookies)
+        requests_session.get('https://class.coursera.org/{0}/auth/auth_redirector?type=login&subtype=normal'.format(course_id))
+        lecture_resp = requests_session.get(course_url)
     except RequestException as err:
         raise BadCourseraException('Failed to open lecture index page at {0}' \
                 '\nThis is probably a bug, so please report it on github and provide the following two lines:' \
@@ -194,7 +198,7 @@ def download_course_resources(args, maestro_cookies, course_id):
                         full_file_name = '{0}.{1}{2}'.format(final_lecture_name, ft_counter, resource_dict['extension'])
                         if not os.path.exists(full_file_name):
                             try:
-                                raw_resp = requests.get(filetype_url, cookies=course_resp.cookies).raw
+                                raw_resp = requests_session.get(filetype_url).raw
                                 download_to_file(raw_resp, full_file_name)
                             except Exception as err:
                                 raise BadCourseraException('Could not download the following resource: {0}' \
